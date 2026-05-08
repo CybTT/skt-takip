@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tatlı Takip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #faf7f2;
+    --surface: #ffffff;
+    --border: #e8e2d6;
+    --border-strong: #d4ccba;
+    --ink: #2a241c;
+    --muted: #8a8275;
+    --accent: #b8612d;
+    --accent-soft: #f5e9dc;
+    --ok: #4a7c4f;
+    --ok-soft: #d9e8da;
+    --ok-mid: #b8d4ba;
+    --warn: #c89110;
+    --warn-soft: #fdf3d8;
+    --warn-mid: #f5e0a3;
+    --danger: #b73a2e;
+    --danger-soft: #fbe4e0;
+    --danger-mid: #f0b8b0;
+    --today: #fff4e8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 32px 24px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1280px; margin: 0 auto; }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 36px;
+    letter-spacing: -0.02em;
+  }
+  .date-today { color: var(--muted); font-size: 14px; }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn-secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+  .btn-secondary:hover { border-color: var(--ink); }
+
+  .sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+  }
+  .sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .sync-indicator.online .sync-dot { background: var(--ok); }
+  .sync-indicator.syncing .sync-dot { background: var(--warn); animation: pulse 1s infinite; }
+  .sync-indicator.error .sync-dot { background: var(--danger); }
+  .sync-indicator.offline .sync-dot { background: var(--muted); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 8px 18px;
+    border: none;
+    background: transparent;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab.active { background: var(--ink); color: var(--bg); }
+  .tab:hover:not(.active) { color: var(--ink); }
+
+  .add-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .form-title {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  input, select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--ink);
+    transition: border-color 0.15s;
+  }
+  select { cursor: pointer; }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+  button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #9a4f23; }
+  .btn-primary:disabled {
+    background: var(--border-strong);
+    cursor: not-allowed;
+  }
+
+  .empty-catalog-hint {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--warn-soft);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .empty-catalog-hint a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(42, 36, 28, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-backdrop.active { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 28px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .modal-title {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  .modal-close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--ink); }
+  .modal-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .catalog-add {
+    display: grid;
+    grid-template-columns: 2fr 100px auto;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .catalog-add input { font-size: 14px; }
+  .catalog-list {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .catalog-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .catalog-row:last-child { border-bottom: none; }
+  .catalog-row .product-name { font-weight: 600; flex: 1; }
+  .catalog-row .product-days {
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--bg);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .catalog-row .remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .catalog-row .remove-btn:hover { color: var(--danger); }
+  .catalog-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 500;
+  }
+  .stat.ok .stat-value { color: var(--ok); }
+  .stat.warn .stat-value { color: var(--warn); }
+  .stat.danger .stat-value { color: var(--danger); }
+
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .chip {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .chip.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .chip:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table.list-table { width: 100%; border-collapse: collapse; }
+  .list-table th {
+    text-align: left;
+    padding: 14px 20px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    font-weight: 600;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .list-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+  }
+  .list-table tr:last-child td { border-bottom: none; }
+  .list-table tr.row-danger { background: var(--danger-soft); }
+  .list-table tr.row-warn { background: var(--warn-soft); }
+
+  .name-cell { font-weight: 600; }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-ok { background: var(--ok-soft); color: var(--ok); }
+  .badge-warn { background: var(--warn-soft); color: var(--warn); }
+  .badge-danger { background: var(--danger-soft); color: var(--danger); }
+  .badge-expired { background: #2a241c; color: white; }
+
+  .delete-btn {
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+  }
+  .delete-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+  .empty-title {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  .calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nav-group { display: flex; gap: 8px; align-items: center; }
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+  .nav-btn:hover { border-color: var(--ink); }
+  .range-label {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    padding: 0 12px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--border-strong);
+  }
+  .swatch-ok { background: var(--ok-mid); }
+  .swatch-warn { background: var(--warn-mid); }
+  .swatch-danger { background: var(--danger-mid); }
+
+  .calendar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: auto;
+    max-width: 100%;
+  }
+  table.calendar {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    table-layout: fixed;
+  }
+  .calendar th, .calendar td {
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+    height: 44px;
+  }
+  .calendar tr:last-child td { border-bottom: none; }
+  .calendar th.name-col, .calendar td.name-col {
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 2;
+    border-right: 2px solid var(--border-strong);
+    width: 200px;
+    min-width: 200px;
+    text-align: left;
+    padding: 6px 14px;
+    font-weight: 600;
+  }
+  .calendar thead th.name-col { background: var(--bg); z-index: 3; }
+  .calendar thead th {
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 10px;
+    width: 38px;
+    min-width: 38px;
+    padding: 4px 0;
+  }
+  .calendar thead th .day-num {
+    display: block;
+    font-size: 14px;
+    color: var(--ink);
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .calendar thead th .month-mark {
+    display: block;
+    font-size: 9px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 1px;
+    height: 12px;
+  }
+  .calendar thead th.is-today { background: var(--today); color: var(--accent); }
+  .calendar thead th.is-today .day-num { color: var(--accent); }
+  .calendar thead th.weekend { background: #f4f0e7; }
+
+  .calendar td.is-today { box-shadow: inset 0 0 0 2px var(--accent); }
+  .calendar td.weekend { background: #f9f6ee; }
+
+  .calendar td.cell-thaw { background: var(--accent); color: white; font-weight: 700; }
+  .calendar td.cell-ok { background: var(--ok-mid); }
+  .calendar td.cell-warn { background: var(--warn-mid); }
+  .calendar td.cell-danger { background: var(--danger-mid); }
+  .calendar td.cell-expiry { background: var(--danger); color: white; font-weight: 700; }
+
+  .calendar .name-col .delete-mini {
+    float: right;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 16px;
+    line-height: 1;
+  }
+  .calendar .name-col .delete-mini:hover { color: var(--danger); }
+  .calendar .name-col .name-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+  .calendar .name-col .meta {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  .footer-note {
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .hidden { display: none; }
+
+  @media (max-width: 720px) {
+    body { padding: 16px 12px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    h1 { font-size: 28px; }
+    .list-table th:nth-child(3),
+    .list-table td:nth-child(3) { display: none; }
+    .catalog-add { grid-template-columns: 1fr; }
+    header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <h1>Tatlı Takip</h1>
+      <div class="date-today" id="dateToday"></div>
+    </div>
+    <div class="header-actions">
+      <div class="sync-indicator" id="syncIndicator">
+        <span class="sync-dot"></span>
+        <span id="syncText">Bağlanıyor...</span>
+      </div>
+      <button class="btn-secondary" onclick="openCatalog()">Ürünleri Yönet</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="list" onclick="setTab('list')">Liste</button>
+    <button class="tab" data-tab="calendar" onclick="setTab('calendar')">Takvim</button>
+  </div>
+
+  <section class="add-form">
+    <div class="form-title">Buzluktan Çıkarma Kaydı</div>
+    <div class="form-grid">
+      <div class="field">
+        <label for="productSelect">Tatlı Seç</label>
+        <select id="productSelect" onchange="onProductChange()">
+          <option value="">— Seçiniz —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="thawDate">Buzluktan Çıkış</label>
+        <input type="date" id="thawDate">
+      </div>
+      <div class="field">
+        <label for="shelfDays">Dayanma (gün)</label>
+        <input type="number" id="shelfDays" value="4" min="1" max="30">
+      </div>
+      <button class="btn-primary" id="addBtn" onclick="addItem()">Ekle</button>
+    </div>
+    <div id="emptyCatalogHint" class="empty-catalog-hint hidden">
+      Henüz ürün listesi boş. <a onclick="openCatalog()">Ürünleri Yönet</a> butonundan tatlı ekle.
+    </div>
+  </section>
+
+  <div id="listView">
+    <section class="stats">
+      <div class="stat">
+        <div class="stat-label">Toplam</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat ok">
+        <div class="stat-label">Taze</div>
+        <div class="stat-value" id="statOk">0</div>
+      </div>
+      <div class="stat warn">
+        <div class="stat-label">Yakında Bitecek</div>
+        <div class="stat-value" id="statWarn">0</div>
+      </div>
+      <div class="stat danger">
+        <div class="stat-label">Süresi Geçmiş</div>
+        <div class="stat-value" id="statExpired">0</div>
+      </div>
+    </section>
+
+    <div class="filter-bar">
+      <button class="chip active" data-filter="all" onclick="setFilter('all')">Tümü</button>
+      <button class="chip" data-filter="ok" onclick="setFilter('ok')">Taze</button>
+      <button class="chip" data-filter="warn" onclick="setFilter('warn')">Yakında Bitecek</button>
+      <button class="chip" data-filter="expired" onclick="setFilter('expired')">Süresi Geçmiş</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="list-table">
+        <thead>
+          <tr>
+            <th>Tatlı</th>
+            <th>Çıkış</th>
+            <th>Son Kullanma</th>
+            <th>Kalan</th>
+            <th>Durum</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="calendarView" class="hidden">
+    <div class="calendar-controls">
+      <div class="nav-group">
+        <button class="nav-btn" onclick="shiftCalendar(-7)">‹ 7 gün</button>
+        <button class="nav-btn" onclick="resetCalendar()">Bugün</button>
+        <button class="nav-btn" onclick="shiftCalendar(7)">7 gün ›</button>
+        <span class="range-label" id="rangeLabel"></span>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch" style="background: var(--accent);"></span>Çıkış (↓)</span>
+        <span class="legend-item"><span class="legend-swatch swatch-ok"></span>Taze</span>
+        <span class="legend-item"><span class="legend-swatch swatch-warn"></span>Son 2 gün</span>
+        <span class="legend-item"><span class="legend-swatch swatch-danger"></span>Son gün</span>
+        <span class="legend-item"><span class="legend-swatch" style="background: var(--danger);"></span>SKT (✕)</span>
+      </div>
+    </div>
+
+    <div class="calendar-wrap">
+      <table class="calendar" id="calendarTable"></table>
+    </div>
+  </div>
+
+  <div class="footer-note">Veriler bulutta (Supabase) saklanır. Her cihazdan aynı veriler görünür.</div>
+
+</div>
+
+<!-- Catalog Modal -->
+<div class="modal-backdrop" id="catalogModal" onclick="closeCatalogIfBackdrop(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">Ürünleri Yönet</div>
+      <button class="modal-close" onclick="closeCatalog()">×</button>
+    </div>
+    <div class="modal-sub">Burada eklenen tatlılar dropdown'da seçenek olarak çıkar.</div>
+
+    <div class="catalog-add">
+      <input type="text" id="catalogName" placeholder="Tatlı adı (ör. Cheesecake)" autocomplete="off">
+      <input type="number" id="catalogDays" placeholder="Gün" value="4" min="1" max="30" title="Varsayılan dayanma günü">
+      <button class="btn-primary" onclick="addToCatalog()">Ekle</button>
+    </div>
+
+    <div class="catalog-list" id="catalogList"></div>
+  </div>
+</div>
+
+<script>
+  // ===== Supabase config =====
+  const SUPABASE_URL = 'https://djbontuiaedpunsohlrg.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqYm9udHVpYWVkcHVuc29obHJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTA0MjIsImV4cCI6MjA5Mzc4NjQyMn0.B4gH61Hy1LhhWg7uBLucd2SGNk2QRtB67IXn6CwYfj8';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ===== State =====
+  let items = [];
+  let catalog = [];
+  let currentFilter = 'all';
+  let currentTab = 'list';
+  let calendarStartOffset = 0;
+  const CALENDAR_DAYS = 30;
+
+  // ===== Sync indicator =====
+  function setSyncStatus(status, text) {
+    const ind = document.getElementById('syncIndicator');
+    ind.className = 'sync-indicator ' + status;
+    document.getElementById('syncText').textContent = text;
+  }
+
+  // ===== Date helpers =====
+  function todayDate() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+  function todayISO() { return toISO(todayDate()); }
+  function toISO(d) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function fromISO(s) {
+    const [y,m,d] = s.split('-').map(Number);
+    const dt = new Date(y, m-1, d);
+    dt.setHours(0,0,0,0);
+    return dt;
+  }
+  function formatDate(iso) {
+    const d = fromISO(iso);
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
+  }
+  function daysBetween(aISO, bISO) {
+    const a = fromISO(aISO);
+    const b = fromISO(bISO);
+    return Math.round((b - a) / 86400000);
+  }
+  function addDays(d, n) {
+    const r = new Date(d);
+    r.setDate(r.getDate() + n);
+    r.setHours(0,0,0,0);
+    return r;
+  }
+  function getStatus(item) {
+    const today = todayISO();
+    const daysLeft = daysBetween(today, item.expiryDate);
+    if (daysLeft < 0) return { type: 'expired', label: 'Süresi Geçmiş', daysLeft };
+    if (daysLeft === 0) return { type: 'danger', label: 'Bugün Bitiyor', daysLeft };
+    if (daysLeft === 1) return { type: 'danger', label: 'Yarın Bitiyor', daysLeft };
+    if (daysLeft <= 2) return { type: 'warn', label: 'Yakında Bitecek', daysLeft };
+    return { type: 'ok', label: 'Taze', daysLeft };
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  // ===== Convert DB row <-> app shape =====
+  function dbToItem(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      thawDate: row.thaw_date,
+      expiryDate: row.expiry_date,
+      shelfDays: row.shelf_days
+    };
+  }
+  function dbToCatalog(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      defaultDays: row.default_days
+    };
+  }
+
+  // ===== Supabase data layer =====
+  async function loadAll() {
+    setSyncStatus('syncing', 'Yükleniyor...');
+    try {
+      const [catRes, itemsRes] = await Promise.all([
+        sb.from('catalog').select('*').order('name'),
+        sb.from('items').select('*').order('thaw_date')
+      ]);
+      if (catRes.error) throw catRes.error;
+      if (itemsRes.error) throw itemsRes.error;
+      catalog = (catRes.data || []).map(dbToCatalog);
+      items = (itemsRes.data || []).map(dbToItem);
+      setSyncStatus('online', 'Bulutta');
+      renderProductSelect();
+      render();
+    } catch (e) {
+      console.error('Load error:', e);
+      setSyncStatus('error', 'Bağlantı hatası');
+      alert('Veriler yüklenemedi. İnternet bağlantını ve Supabase ayarlarını kontrol et.\n\nDetay: ' + (e.message || e));
+    }
+  }
+
+  async function dbAddItem(item) {
+    const { data, error } = await sb.from('items').insert({
+      name: item.name,
+      thaw_date: item.thawDate,
+      expiry_date: item.expiryDate,
+      shelf_days: item.shelfDays
+    }).select().single();
+    if (error) throw error;
+    return dbToItem(data);
+  }
+
+  async function dbDeleteItem(id) {
+    const { error } = await sb.from('items').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async function dbAddCatalog(name, days) {
+    const { data, error } = await sb.from('catalog').insert({
+      name,
+      default_days: days
+    }).select().single();
+    if (error) throw error;
+    return dbToCatalog(data);
+  }
+
+  async function dbDeleteCatalog(id) {
+    const { error } = await sb.from('catalog').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  // ===== Init =====
+  document.getElementById('thawDate').value = todayISO();
+  document.getElementById('dateToday').textContent =
+    'Bugün: ' + new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  document.getElementById('catalogName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addToCatalog();
+  });
+
+  // ===== Catalog modal =====
+  function openCatalog() {
+    document.getElementById('catalogModal').classList.add('active');
+    renderCatalog();
+    setTimeout(() => document.getElementById('catalogName').focus(), 50);
+  }
+  function closeCatalog() {
+    document.getElementById('catalogModal').classList.remove('active');
+  }
+  function closeCatalogIfBackdrop(e) {
+    if (e.target.id === 'catalogModal') closeCatalog();
+  }
+
+  async function addToCatalog() {
+    const name = document.getElementById('catalogName').value.trim();
+    const days = parseInt(document.getElementById('catalogDays').value, 10);
+    if (!name) { document.getElementById('catalogName').focus(); return; }
+    if (!days || days < 1) return;
+
+    if (catalog.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      alert('Bu ürün zaten listede var.');
+      return;
+    }
+
+    setSyncStatus('syncing', 'Kaydediliyor...');
+    try {
+      const newProduct = await dbAddCatalog(name, days);
+      catalog.push(newProduct);
+      catalog.sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+      setSyncStatus('online', 'Bulutta');
+      renderCatalog();
+      renderProductSelect();
+      document.getElementById('catalogName').value = '';
+      document.getElementById('catalogName').focus();
+    } catch (e) {
+      console.error(e);
+      setSyncStatus('error', 'Hata');
+      alert('Ürün eklenemedi: ' + (e.message || e));
+    }
+  }
+
+  async function removeFromCatalog(id) {
+    const product = catalog.find(p => p.id === id);
+    if (!product) return;
+    if (!confirm(`"${product.name}" ürün listesinden silinsin mi?\n\n(Daha önce eklenmiş kayıtlar etkilenmez.)`)) return;
+
+    setSyncStatus('syncing', 'Siliniyor...');
+    try {
+      await dbDeleteCatalog(id);
+      catalog = catalog.filter(p => p.id !== id);
+      setSyncStatus('online', 'Bulutta');
+      renderCatalog();
+      renderProductSelect();
+    } catch (e) {
+      console.error(e);
+      setSyncStatus('error', 'Hata');
+      alert('Silinemedi: ' + (e.message || e));
+    }
+  }
+
+  function renderCatalog() {
+    const list = document.getElementById('catalogList');
+    if (catalog.length === 0) {
+      list.innerHTML = `<div class="catalog-empty">Henüz ürün yok. Yukarıdan ekle.</div>`;
+      return;
+    }
+    list.innerHTML = catalog.map(p => `
+      <div class="catalog-row">
+        <span class="product-name">${escapeHtml(p.name)}</span>
+        <span class="product-days">${p.defaultDays} gün</span>
+        <button class="remove-btn" onclick="removeFromCatalog(${p.id})" title="Sil">×</button>
+      </div>
+    `).join('');
+  }
+
+  function renderProductSelect() {
+    const sel = document.getElementById('productSelect');
+    const previousValue = sel.value;
+    sel.innerHTML = '<option value="">— Seçiniz —</option>' +
+      catalog.map(p => `<option value="${p.id}" data-days="${p.defaultDays}">${escapeHtml(p.name)}</option>`).join('');
+    if (previousValue && catalog.some(p => String(p.id) === previousValue)) {
+      sel.value = previousValue;
+    }
+
+    const hint = document.getElementById('emptyCatalogHint');
+    const addBtn = document.getElementById('addBtn');
+    if (catalog.length === 0) {
+      hint.classList.remove('hidden');
+      addBtn.disabled = true;
+    } else {
+      hint.classList.add('hidden');
+      addBtn.disabled = false;
+    }
+  }
+
+  function onProductChange() {
+    const sel = document.getElementById('productSelect');
+    const opt = sel.options[sel.selectedIndex];
+    if (opt && opt.dataset.days) {
+      document.getElementById('shelfDays').value = opt.dataset.days;
+    }
+  }
+
+  function setTab(t) {
+    currentTab = t;
+    document.querySelectorAll('.tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === t);
+    });
+    document.getElementById('listView').classList.toggle('hidden', t !== 'list');
+    document.getElementById('calendarView').classList.toggle('hidden', t !== 'calendar');
+    render();
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.filter === f);
+    });
+    renderList();
+  }
+
+  function shiftCalendar(n) { calendarStartOffset += n; renderCalendar(); }
+  function resetCalendar() { calendarStartOffset = 0; renderCalendar(); }
+
+  // ===== Add / delete item =====
+  async function addItem() {
+    const sel = document.getElementById('productSelect');
+    const productId = parseInt(sel.value, 10);
+    const product = catalog.find(p => p.id === productId);
+
+    if (!product) {
+      alert('Lütfen listeden bir tatlı seç.');
+      sel.focus();
+      return;
+    }
+
+    const thawDate = document.getElementById('thawDate').value;
+    const shelfDays = parseInt(document.getElementById('shelfDays').value, 10);
+    if (!thawDate || !shelfDays || shelfDays < 1) return;
+
+    const expiry = addDays(fromISO(thawDate), shelfDays);
+    const newItem = {
+      name: product.name,
+      thawDate,
+      expiryDate: toISO(expiry),
+      shelfDays
+    };
+
+    setSyncStatus('syncing', 'Kaydediliyor...');
+    try {
+      const saved = await dbAddItem(newItem);
+      items.push(saved);
+      setSyncStatus('online', 'Bulutta');
+      render();
+
+      sel.value = '';
+      document.getElementById('shelfDays').value = 4;
+      sel.focus();
+    } catch (e) {
+      console.error(e);
+      setSyncStatus('error', 'Hata');
+      alert('Kayıt eklenemedi: ' + (e.message || e));
+    }
+  }
+
+  async function removeItem(id) {
+    if (!confirm('Bu kayıt silinsin mi?')) return;
+    setSyncStatus('syncing', 'Siliniyor...');
+    try {
+      await dbDeleteItem(id);
+      items = items.filter(i => i.id !== id);
+      setSyncStatus('online', 'Bulutta');
+      render();
+    } catch (e) {
+      console.error(e);
+      setSyncStatus('error', 'Hata');
+      alert('Silinemedi: ' + (e.message || e));
+    }
+  }
+
+  // ===== Render =====
+  function render() { renderList(); renderCalendar(); }
+
+  function renderList() {
+    const enriched = items.map(it => ({ ...it, status: getStatus(it) }));
+    enriched.sort((a, b) => a.status.daysLeft - b.status.daysLeft);
+
+    const total = enriched.length;
+    const okCount = enriched.filter(i => i.status.type === 'ok').length;
+    const warnCount = enriched.filter(i => i.status.type === 'warn' || i.status.type === 'danger').length;
+    const expiredCount = enriched.filter(i => i.status.type === 'expired').length;
+
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statOk').textContent = okCount;
+    document.getElementById('statWarn').textContent = warnCount;
+    document.getElementById('statExpired').textContent = expiredCount;
+
+    let filtered = enriched;
+    if (currentFilter === 'ok') filtered = enriched.filter(i => i.status.type === 'ok');
+    else if (currentFilter === 'warn') filtered = enriched.filter(i => i.status.type === 'warn' || i.status.type === 'danger');
+    else if (currentFilter === 'expired') filtered = enriched.filter(i => i.status.type === 'expired');
+
+    const tbody = document.getElementById('tableBody');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">
+        <div class="empty-title">${total === 0 ? 'Henüz kayıt yok' : 'Bu kategoride kayıt yok'}</div>
+        <div>${total === 0 ? 'Yukarıdaki formdan ilk kaydı ekle' : 'Başka bir filtre seç'}</div>
+      </div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(item => {
+      const s = item.status;
+      let badgeClass = 'badge-ok';
+      let rowClass = '';
+      if (s.type === 'expired') { badgeClass = 'badge-expired'; rowClass = 'row-danger'; }
+      else if (s.type === 'danger') { badgeClass = 'badge-danger'; rowClass = 'row-danger'; }
+      else if (s.type === 'warn') { badgeClass = 'badge-warn'; rowClass = 'row-warn'; }
+
+      let kalanText;
+      if (s.daysLeft < 0) kalanText = `${Math.abs(s.daysLeft)} gün geçti`;
+      else if (s.daysLeft === 0) kalanText = 'Bugün son';
+      else kalanText = `${s.daysLeft} gün`;
+
+      return `<tr class="${rowClass}">
+        <td class="name-cell">${escapeHtml(item.name)}</td>
+        <td>${formatDate(item.thawDate)}</td>
+        <td>${formatDate(item.expiryDate)}</td>
+        <td>${kalanText}</td>
+        <td><span class="badge ${badgeClass}">${s.label}</span></td>
+        <td><button class="delete-btn" onclick="removeItem(${item.id})">Sil</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderCalendar() {
+    const table = document.getElementById('calendarTable');
+    const startDate = addDays(todayDate(), calendarStartOffset);
+    const todayISOStr = todayISO();
+
+    let thead = '<thead><tr>';
+    thead += '<th class="name-col">Tatlı / Tarih</th>';
+    for (let i = 0; i < CALENDAR_DAYS; i++) {
+      const d = addDays(startDate, i);
+      const iso = toISO(d);
+      const isToday = iso === todayISOStr;
+      const dow = d.getDay();
+      const isWeekend = dow === 0 || dow === 6;
+      const dayShort = d.toLocaleDateString('tr-TR', { weekday: 'short' }).slice(0,3);
+      const dayNum = d.getDate();
+      const monthShort = d.toLocaleDateString('tr-TR', { month: 'short' });
+      const showMonth = (dayNum === 1 || i === 0);
+      const cls = [isToday ? 'is-today' : '', isWeekend ? 'weekend' : ''].filter(Boolean).join(' ');
+      thead += `<th class="${cls}" title="${d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}">
+        ${dayShort}
+        <span class="day-num">${dayNum}</span>
+        <span class="month-mark">${showMonth ? monthShort : ''}</span>
+      </th>`;
+    }
+    thead += '</tr></thead>';
+
+    const endDate = addDays(startDate, CALENDAR_DAYS - 1);
+    document.getElementById('rangeLabel').textContent =
+      `${startDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} – ${endDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`;
+
+    let tbody = '<tbody>';
+    if (items.length === 0) {
+      tbody += `<tr><td class="name-col" colspan="${CALENDAR_DAYS + 1}" style="padding: 32px; text-align: center; color: var(--muted);">
+        Takvimde gösterilecek kayıt yok.
+      </td></tr>`;
+    } else {
+      const sorted = [...items].sort((a,b) => a.thawDate.localeCompare(b.thawDate));
+      for (const item of sorted) {
+        tbody += '<tr>';
+        tbody += `<td class="name-col">
+          <button class="delete-mini" onclick="removeItem(${item.id})" title="Sil">×</button>
+          <span class="name-text">${escapeHtml(item.name)}</span>
+          <span class="meta">${formatDate(item.thawDate)} → ${formatDate(item.expiryDate)} (${item.shelfDays}g)</span>
+        </td>`;
+
+        for (let i = 0; i < CALENDAR_DAYS; i++) {
+          const d = addDays(startDate, i);
+          const iso = toISO(d);
+          const isToday = iso === todayISOStr;
+          const dow = d.getDay();
+          const isWeekend = dow === 0 || dow === 6;
+          const cellInfo = getCellState(item, iso);
+
+          const classes = [];
+          if (cellInfo.cls) classes.push(cellInfo.cls);
+          if (isToday) classes.push('is-today');
+          if (isWeekend && !cellInfo.cls) classes.push('weekend');
+
+          const content = cellInfo.content || '';
+          const titleAttr = cellInfo.title ? `title="${cellInfo.title}"` : '';
+          tbody += `<td class="${classes.join(' ')}" ${titleAttr}>${content}</td>`;
+        }
+        tbody += '</tr>';
+      }
+    }
+    tbody += '</tbody>';
+
+    table.innerHTML = thead + tbody;
+  }
+
+  function getCellState(item, dateISO) {
+    const dThaw = daysBetween(item.thawDate, dateISO);
+    const dExp = daysBetween(dateISO, item.expiryDate);
+    if (dThaw < 0) return { cls: '', content: '', title: '' };
+    if (dThaw === 0) return { cls: 'cell-thaw', content: '↓', title: `${item.name}: Buzluktan çıkış (${formatDate(item.thawDate)})` };
+    if (dateISO === item.expiryDate) return { cls: 'cell-expiry', content: '✕', title: `${item.name}: Son kullanma (${formatDate(item.expiryDate)})` };
+    if (dExp < 0) return { cls: '', content: '', title: '' };
+    let cls = 'cell-ok';
+    if (dExp === 1) cls = 'cell-danger';
+    else if (dExp === 2) cls = 'cell-warn';
+    return { cls, content: '', title: `${item.name}: ${dExp} gün kaldı (SKT ${formatDate(item.expiryDate)})` };
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeCatalog();
+  });
+
+  // ===== Initial load =====
+  loadAll();
+</script>
+</body>
+</html>
